@@ -13,12 +13,15 @@
 #include "ril_util.h"
 #include "ril_telephony.h"
 #include "TcpIp.h"
+#include "DatosGps.h"
 
 
 /*
 {'idMovil':'197026','transaccion':'02','dirIpCliente':'10.182.24.22','movImei':'867060031685312','version':'V4,2.3','tipoCoordenada':'0','kilometros':'280','origenSolicitud':'1','latitud':'0434.5840N','longitud':'07406.7863W','velocidad':'0.03.1','altitud':'2578.6','curso':'205.26','fecha':'191018233257','satelites':'10'}
 2018-10-19 18:32:59:132 - 190.242.83.115:16331|SALE : {"transaccion":"02","eventoUnidad":"00"}
 */
+
+
 
 
 void init_TcpIp(void){
@@ -34,14 +37,28 @@ void init_TcpIp(void){
     ret = Ql_UART_Open(UART_PORT1, 115200, FC_NONE);
     Ql_UART_Open(UART_PORT1, 115200, FC_NONE);
 
+    flagwismo = 1;
+
     Ql_Timer_Register(ATCmdtimerId, SendAtCmd_Callback_Timer, NULL);                        //Timer para la Tx de los comandos AT 
-    Ql_Timer_Start(ATCmdtimerId, 1500, TRUE);                                               //Timer para la Tx de los comandos AT 1.5 segundos
+    Ql_Timer_Start(ATCmdtimerId, 30000, TRUE);                                               //Timer para la Tx de los comandos AT 1.5 segundos
 
 }
 
 void SendAtCmd_Callback_Timer(u32 timerId, void* param){
     if(ATCmdtimerId == timerId){
-        SendAtCmd();
+        //SendAtCmd();
+        poliConexion ++;
+        if(flagConectado == 1){
+            poliConexion = 0;
+            Ql_Debug_Trace("Toma datos Actuales del GPS: \r\n");
+            TomaDatosActuales();
+            EnviaTrama();
+        }else{
+            if(poliConexion > 2){
+                poliConexion = 0;
+                Rester_Modulo();
+            }
+        }
     }
 }
 
@@ -84,10 +101,19 @@ void SendAtCmd(){
             break;
             
         case AT_QICSGP:// 
+
+            Delay();
+            Delay();
+            Delay();
+            Delay();
             Ril_tcp_QICSGP();
             break;
             
         case AT_QIACT:// 
+            Delay();
+            Delay();
+            Delay();
+            Delay();
             Ril_tcp_QIACT();
             break;
             
@@ -101,14 +127,23 @@ void SendAtCmd(){
             
         case AT_QIOPEN:// 
             Ril_tcp_QIOPE();
+            Delay();
+            Delay();
+            Delay();
+            Delay();
             break;
 
         case AT_SEND:// 
-            Ril_Tcp_QISEND();
+             EnviaTrama();
+            //Ril_Tcp_QISEND();
             //g_cmd_idx++;
             break;    
 
         case FIN_CADENA:// 
+            Delay();
+            Delay();
+            Delay();
+            Delay();
             Ql_Debug_Trace("<-- Jaime1.-->\r\n");
              //g_cmd_idx++;
             Ril_Fin();
@@ -121,7 +156,7 @@ void SendAtCmd(){
             //DoFOTAUpgrade();
             cmdstates=255;
             g_cmd_idx = 0;
-            Ql_Timer_Stop(ATCmdtimerId);
+            //Ql_Timer_Stop(ATCmdtimerId);
             break;
         }
     }
@@ -135,6 +170,88 @@ void SendAtCmd(){
     }
 }
 
+void SendAtCmd2(){
+   
+
+        switch (flagwismo){
+
+        case (1):
+            Ril_tcp_ATE0();
+            break;
+            
+        case (2):
+            Ril_tcp_CSQ();
+            break;
+            
+        case (3):
+            Ril_tcp_QURCCFG();
+            break;
+            
+        case (4):
+            Ril_tcp_QCFG();
+            break;
+            
+        case (5):
+            Ril_tcp_CLCC();
+            break;
+            
+        case (6):
+            Ril_tcp_CGSN();
+            break;
+            
+        case (7):
+            Ril_tcp_QICSGP();
+            break;
+            
+        case (8):
+            Ril_tcp_QIACT();
+            break;
+            
+        case (9):
+            Ril_tcp_ATV1();
+            break;
+            
+        case (10):
+            Ril_tcp_QIACTPRE();
+            break;
+            
+        case (11):
+            Ril_tcp_QIOPE();
+            break;
+
+        case (12):
+            Ril_Tcp_QISEND();
+            //g_cmd_idx++;
+            break;    
+
+        case (13):
+            Ql_Debug_Trace("<-- LA BANDERA ES: %d -->\r\n",flagwismo);
+            Ql_Debug_Trace("<-- Jaime1.-->\r\n");
+            flagwismo = 20;
+             //g_cmd_idx++;
+            Ril_Fin();
+            break;      
+
+        case (14):
+          
+            break; 
+        case (20):
+          
+            break;                
+
+       // default:
+       //     Ql_Debug_Trace("<-- at commands finished.-->\r\n");
+            
+            // Start to fota upgrade
+      
+            //cmdstates=255;
+            //g_cmd_idx = 0;
+            //Ql_Timer_Stop(ATCmdtimerId);
+       //     break;
+        }
+    
+}
+
 
 static void CallBack_UART_Hdlr(Enum_SerialPort port, Enum_UARTEventType msg, bool level, void* customizedPara)
 {
@@ -142,64 +259,45 @@ static void CallBack_UART_Hdlr(Enum_SerialPort port, Enum_UARTEventType msg, boo
 }
 
 char * CompletaBuffer (){
+
+    int i = 0;
+        while (i < 800) {
+            bufferTxModulo[i] = 0x00; /*Se inicializa el Vector bufferTx1 como cadena vacía*/
+            i++;
+        }
     char buffer[800];
 
-    Ql_sprintf(nmea,"\'latitud\':\'0\',\'longitud\':\'0\',\'velocidad\':\'\',"
-                    "\'altitud\':\'\',\'curso\':\'\',\'fecha\':\'\',\'satelites\':\'\'");
+
+    //Ql_sprintf(nmea,"\'latitud\':\'4.6256408\',\'longitud\':\'-74.1108672\',\'velocidad\':\'0.02.5\',"
+    //                "\'altitud\':\'2568.2\',\'curso\':\'219.49\',\'fecha\':\'241018181041\',\'satelites\':\'09\'");
+
+
+    Ql_sprintf(nmea,"\'latitud\':\'%s\',\'longitud\':\'%s\',\'velocidad\':\'%s\',"
+                    "\'altitud\':\'%s\',\'curso\':\'%s\',\'fecha\':\'%s\',\'satelites\':\'%s\'", latitudgps, longitudgps, velocidad, altura, curso,fecha,numeroSatelites);
+
+
+
+
 
     //Ql_sprintf(bufferTxModulo," {\'idMovil\':\'%s\',\'transaccion\':\'%s\',\'dirIpCliente\':\'%d.%d.%d.%d\',\'movImei\':\'%s\',\'version\':\'%s\',"
     //            "\'tipoCoordenada\':\'0\',\'kilometros\':\'%s\','origenSolicitud':'1',%s}\x0A\x0D\x1A","555555","02",10,10,10,10,"32132132132131ei","3.0","20",nmea);
 
 	Ql_sprintf(bufferTxModulo," {\'idMovil\':\'%s\',\'transaccion\':\'%s\',\'dirIpCliente\':\'%d.%d.%d.%d\',\'movImei\':\'%s\',\'version\':\'%s\',"
-                "\'tipoCoordenada\':\'1\',\'kilometros\':\'%s\','origenSolicitud':'1', %s}|\x1A","555555","02",10,10,10,10,"32132132132131","3.0","20", nmea);
+                "\'tipoCoordenada\':\'1\',\'kilometros\':\'%s\','origenSolicitud':'1', %s}|\x1A","555555","02",10,10,10,10,"32132132132131","V4-char","20", nmea);
 
+//{'idMovil':'197025','transaccion':'02','dirIpCliente':'10.177.59.72','movImei':'867060031208644','version':'V4,2.3','tipoCoordenada':'0','kilometros':'1214','origenSolicitud':'1','latitud':'0440.8904N','longitud':'07407.7669W','velocidad':'0.02.5','altitud':'2568.2','curso':'219.49','fecha':'241018181041','satelites':'09'}
 
-	//Ql_sprintf(bufferTxModulo,"test\n");
-
-
+      // Convertir cada char a minúscula
+    // usando tolower
+    //for (int indice = 0; bufferTxModulo[indice] != '\0'; ++indice){
+    //    bufferTxModulo[indice] = tolower(bufferTxModulo[indice]);
+    //}
+   
 
     return bufferTxModulo;
 }
 
-
-static s32 ATSend_Handler(char* line, u32 len, void* userData)
-{
-    Ql_UART_Write(m_myUartPort, (u8*)line, len);
  
-    if (Ql_RIL_FindLine(line, len, "OK"))
-    {  
-        Ql_Debug_Trace("todo ok\r\n");
-        return  RIL_ATRSP_SUCCESS;
-    }
-    else if (Ql_RIL_FindLine(line, len, "ERROR"))
-    {  
-        Ql_Debug_Trace("ERROR\r\n");
-        return  RIL_ATRSP_FAILED;
-    }
-    else if (Ql_RIL_FindString(line, len, "+CME ERROR"))
-    {
-        return  RIL_ATRSP_FAILED;
-    }
-    else if (Ql_RIL_FindString(line, len, "+CMS ERROR:"))
-    {
-        return  RIL_ATRSP_FAILED;
-    }
-
-    else if (Ql_RIL_FindString(line, len, ">"))
-    {
-
-
-
-       
-        Ql_Debug_Trace("\r\n<-- Se actiava el Desbloqueo -->\r\n");
-    
-        return  RIL_ATRSP_SUCCESS;
-    }
-   
-
-    return RIL_ATRSP_CONTINUE; //continue wait
-}
-
 /*******************************************************************************************************************/
 /********************************       Comandos AT para conexion del Modulo      **********************************/
 /*******************************************************************************************************************/
@@ -207,6 +305,8 @@ static s32 ATSend_Handler(char* line, u32 len, void* userData)
 
 s32 Ril_tcp_ATE0()
 {
+
+    flagConectado = 1;
     s32 ret; 
     Ql_memset(sendbuffer, 0, sizeof(sendbuffer));
     Ql_sprintf((char *)sendbuffer, "ATE0");  
@@ -219,6 +319,7 @@ s32 Ril_tcp_ATE0()
     }
     else
     {
+        flagwismo = 2;
         g_cmd_idx++;
     }
     return ret;
@@ -234,10 +335,12 @@ s32 Ril_tcp_CSQ()
     Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffer, ret);
     if(ret < 0)
     {
+        Rester_Modulo();
         Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
     }
     else
     {
+        flagwismo = 3;
         g_cmd_idx++;
     }
     return ret;   
@@ -253,10 +356,12 @@ s32 Ril_tcp_QURCCFG()
     Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffer, ret);
     if(ret < 0)
     {
+        Rester_Modulo();
         Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
     }
     else
     {
+        flagwismo = 4;
         g_cmd_idx++;
     }
     return ret;
@@ -277,10 +382,12 @@ s32 Ril_tcp_QCFG()
     Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffer, ret);
     if(ret < 0)
     {
+        Rester_Modulo();
         Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
     }
     else
     {
+        flagwismo = 5;
         g_cmd_idx++;
     }
     return ret;
@@ -301,10 +408,12 @@ s32 Ril_tcp_CLCC()
     Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffer, ret);
     if(ret < 0)
     {
+        Rester_Modulo();
         Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
     }
     else
     {
+        flagwismo = 6;
         g_cmd_idx++;
     }
     return ret;
@@ -325,10 +434,12 @@ s32 Ril_tcp_CGSN()
     Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffer, ret);
     if(ret < 0)
     {
+        Rester_Modulo();
         Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
     }
     else
     {
+        flagwismo = 7;
         g_cmd_idx++;
     }
     return ret;
@@ -349,10 +460,12 @@ s32 Ril_tcp_QICSGP()
     Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffer, ret);
     if(ret < 0)
     {
+        Rester_Modulo();
         Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
     }
     else
     {
+        flagwismo = 8;
         g_cmd_idx++;
     }
     return ret;
@@ -362,21 +475,19 @@ s32 Ril_tcp_QICSGP()
 s32 Ril_tcp_QIACT()
 {
     s32 ret; 
-
     Ql_memset(sendbuffer, 0, sizeof(sendbuffer));
-    //Ql_sprintf((char *)sendbuffer, "AT+QFTPPASS=\"%s\"\n", FTP_PASSWORD);
     Ql_sprintf((char *)sendbuffer, "AT+QIACT=1");
-
-    //Ql_Debug_Trace("%s\r\n",sendbuffer);
-    
-    ret = Ql_RIL_SendATCmd(sendbuffer,Ql_strlen(sendbuffer),NULL,NULL,0);
+    //ret = Ql_RIL_SendATCmd(sendbuffer,Ql_strlen(sendbuffer),NULL,NULL,0);
+    ret = Ql_RIL_SendATCmd(sendbuffer,Ql_strlen(sendbuffer),ATSend_Handler, NULL,0);
     Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffer, ret);
     if(ret < 0)
     {
+        Rester_Modulo();
         Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
     }
     else
     {
+        flagwismo = 9;
         g_cmd_idx++;
     }
     return ret;
@@ -397,10 +508,12 @@ s32 Ril_tcp_ATV1()  // +QFTPGET;  handler by URC
     Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffer, ret);
     if(ret < 0)
     {
+        Rester_Modulo();
         Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
     }
     else
     {
+        flagwismo = 10;
         g_cmd_idx++;
     }
     return ret;
@@ -420,10 +533,12 @@ s32 Ril_tcp_QIACTPRE()
     Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffer, ret);
     if(ret < 0)
     {
+        Rester_Modulo();
         Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
     }
     else
     {
+        flagwismo = 11;
         g_cmd_idx++;
     }
     return ret;
@@ -433,21 +548,22 @@ s32 Ril_tcp_QIACTPRE()
 s32 Ril_tcp_QIOPE()
 {
     
-
-	flagConectado = 1;
-
     s32 ret; 
-
     Ql_memset(sendbuffer, 0, sizeof(sendbuffer));
-    Ql_sprintf((char *)sendbuffer, "AT+QIOPEN=1,0,\"TCP\",\"200.91.204.38\",11253,0,1");
-    ret = Ql_RIL_SendATCmd(sendbuffer,Ql_strlen(sendbuffer), NULL, NULL, 0);
+    //Ql_sprintf((char *)sendbuffer, "AT+QIOPEN=1,0,\"TCP\",\"200.91.204.38\",11260,0,1");
+    Ql_sprintf((char *)sendbuffer, "AT+QIOPEN=1,0,\"TCP\",\"200.91.204.38\",11254,0,1");
+    ret = Ql_RIL_SendATCmd(sendbuffer,Ql_strlen(sendbuffer),ATSend_Handler, NULL,0);
+    //ret = Ql_RIL_SendATCmd(sendbuffer,Ql_strlen(sendbuffer), NULL, NULL, 0);
     Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffer, ret);
+    
     if(ret < 0)
     {
+        Rester_Modulo();
         Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
     }
     else
     {
+        //flagwismo = 12;
         g_cmd_idx++;
     }
     return ret;
@@ -460,15 +576,23 @@ s32 Ril_Tcp_QISEND(){
     Ql_memset(sendbuffer, 0, sizeof(sendbuffer));
     
     Ql_sprintf((char *)sendbuffer, "AT+QISEND=0");
-    //ret = Ql_RIL_SendATCmd(sendbuffer,Ql_strlen(sendbuffer), NULL, NULL, 0);
-    ret = Ql_RIL_SendATCmd(sendbuffer,Ql_strlen(sendbuffer),ATSend_Handler, NULL,0);
+    ret = Ql_RIL_SendATCmd(sendbuffer,Ql_strlen(sendbuffer), NULL, NULL, 5000);
+    //ret = Ql_RIL_SendATCmd(sendbuffer,Ql_strlen(sendbuffer),ATSend_Handler, NULL,0);
     Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffer, ret);
     if(ret < 0)
     {
-        Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
+
+        if(ret == -2){
+            Ril_Fin();
+            Ql_Debug_Trace("\r\n<-- Se abre > -->\r\n");
+        }else{
+            Rester_Modulo();
+            Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
+        }
     }
     else
     {
+        //flagwismo = 13;
         g_cmd_idx++;
     }
     return ret;
@@ -478,21 +602,25 @@ s32 Ril_Tcp_QISEND(){
 
 s32 Ril_Fin(){
      Ql_Debug_Trace("<-- Jaime2.-->\r\n");
-    
-     // do{
 
-        //int i = 0;
-        //while (i < 800) {
-        //    bufferTxModulo[i] = 0x00; /*Se inicializa el Vector bufferTx1 como cadena vacía*/
-        //    i++;
-        //}
+     Delay();
+     Delay();
+     Delay();
+    
+      do{
+
         
+        
+
+        Ql_Debug_Trace("<-- LA BANDERA ES: %d -->\r\n",flagwismo);
+
+
         bufferTxModulo[0]=*strcat(bufferTxModulo,"JAIME");             
         bufferTxModulo[0]=*strcat(bufferTxModulo,"ANDRES");          //Colaca la Version de Software
         bufferTxModulo[0]=*strcat(bufferTxModulo,"LOMBANA");             //Colacar separador ","
         bufferTxModulo[0]=*strcat(bufferTxModulo,"GONZALEZ");         //Imei
         bufferTxModulo[0]=*strcat(bufferTxModulo,"VALERIE");             //Colacar separador "|"
-        bufferTxModulo[0]=*strcat(bufferTxModulo,"JAIME|");             //Colacar separador "|"
+        bufferTxModulo[0]=*strcat(bufferTxModulo,"JAIME");             //Colacar separador "|"
         
         //bufferTxModulo[0]=*strcat(bufferTxModulo," LOMBANA");             //Colacar separador "|"
         //bufferTxModulo[0]=*strcat(bufferTxModulo,"\x0D");             
@@ -504,55 +632,109 @@ s32 Ril_Fin(){
 
 
         s32 ret;
-        //char *sendbuffer = CompletaBuffer();
+        char *sendbuffer = CompletaBuffer();
        
-        Ql_Debug_Trace("<-- SE DEBE ENVIAR ESTO: %s -->\r\n",bufferTxModulo);
+        Ql_Debug_Trace("<-- SE DEBE ENVIAR ESTO: %s -->\r\n",sendbuffer);
 
-        ret = Ql_RIL_SendATCmd(bufferTxModulo,Ql_strlen(bufferTxModulo),NULL, NULL,0);
+        //ret = Ql_RIL_SendATCmd(bufferTxModulo,Ql_strlen(bufferTxModulo),NULL, NULL,5000);
+        ret = Ql_RIL_SendATCmd(sendbuffer,Ql_strlen(sendbuffer),NULL, NULL,5000);
+
+        
+
         if(ret < 0)
         {
             Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
         }
         else
         {
-
-
-
-                /*Delay();
-                Delay();
-                Delay();
-                Ql_Debug_Trace("<-- Pasa el Delay.-->\r\n");
-                //ret = Ql_RIL_SendATCmd(bufferTxModulo,Ql_strlen(bufferTxModulo),NULL, NULL,0);
-                ret = Ql_RIL_SendATCmd("\x1A",Ql_strlen("\x1A"),NULL, NULL,0);
-                if(ret < 0)
-                {
-                    Ql_Debug_Trace("\r\n<-- send AT command failure -->\r\n");
-                }
-                else
-                     Ql_Debug_Trace("\r\n<-- Deberia salir de enviar -->\r\n");
-                    g_cmd_idx++;
-                {
-
-
-
-                    
-
-               
-            }
-            */
-                    Ql_Debug_Trace("\r\n<-- Deberia salir de enviar -->\r\n");
-                    g_cmd_idx++;
-
+            Ql_Debug_Trace("\r\n<-- Debio Enviar -->\r\n");
+            g_cmd_idx++;
+            flagwismo = 14;
             return ret;
 
          }
 
-   // }while(1);
+    }while(1);
+
+}
 
 
+s32 Rester_Modulo(){
+    flagConectado = 0;
+    flagwismo = 1;
+    Ql_Reset(0);
 }
 /*******************************************************************************************************************/
 /*******************************************************************************************************************/
+static s32 ATSend_Handler(char* line, u32 len, void* userData){
+    Ql_UART_Write(m_myUartPort, (u8*)line, len);
+ 
+    if (Ql_RIL_FindLine(line, len, "OK"))
+    {  
+        if(flagwismo != 11 ){
+            Ql_Debug_Trace("todo ok\r\n");
+            return  RIL_ATRSP_SUCCESS;
+        }
+    }
+    else if (Ql_RIL_FindLine(line, len, "ERROR"))
+    {  
+        if(flagwismo == 8){
+            Ql_Debug_Trace("ERROR, Revise SIM o datos...\r\n");
+            Rester_Modulo();
+        }else{
+            Ql_Debug_Trace("ERROR\r\n");
+        }
+        
+        return  RIL_ATRSP_FAILED;
+    }
+    else if (Ql_RIL_FindString(line, len, "+CME ERROR"))
+    {
+        return  RIL_ATRSP_FAILED;
+    }
+    else if (Ql_RIL_FindString(line, len, "+CMS ERROR:"))
+    {
+        return  RIL_ATRSP_FAILED;
+    }
+
+    else if (Ql_RIL_FindString(line, len, "+QIOPEN: 0,0")|| Ql_RIL_FindString(line, len, "+QIOPEN: 0,562"))
+    
+    {
+        flagConectado = 1;
+        flagwismo = 12;
+        return  RIL_ATRSP_SUCCESS;
+    }
+
+    else if (Ql_RIL_FindString(line, len, ">"))
+    {
+        //flagwismo = 13;
+        Ril_Fin();
+        //Ql_Debug_Trace("\r\n<-- Se abre > -->\r\n");
+        return  RIL_ATRSP_SUCCESS;
+    }
+
+    else if (Ql_RIL_FindString(line, len, "SEND OK"))
+    {
+        Ql_Debug_Trace("\r\n<-- Deberia salir de enviar -->\r\n");
+        flagwismo = 14;
+        return  RIL_ATRSP_SUCCESS;
+    }
+
+    else if (Ql_RIL_FindString(line, len, "Y"))
+    {
+        Ql_Debug_Trace("\r\n<-- LLEGA KEEP ALIVE -->\r\n");
+       
+        return  RIL_ATRSP_SUCCESS;
+    }
+   
+
+    return RIL_ATRSP_CONTINUE; //continue wait
+}
+/****************************************************************************************************************************/
+/****************************************************************************************************************************/
+void EnviaTrama(void){
+    Ril_Tcp_QISEND();
+}
+
 /****************************************************************************************************************************/
 /****************************************************************************************************************************/
 void Delay (void){

@@ -59,9 +59,9 @@ void init_Gps(void) {   // inicializacion del gps
 	/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 	//register a timer (GPS) save
 	Ql_Timer_Register(GpstimerId, Gps_Callback_Timer, NULL);                        //Timer para la Rx DEL gps 
-    Ql_Timer_Start(GpstimerId, 10000, TRUE);                                         //Timer para la Rx DEL gps  1.5 segundos
+    Ql_Timer_Start(GpstimerId, 20000, TRUE);                                         //Timer para la Rx DEL gps  1.5 segundos
 
-     init_TcpIp();
+     //init_TcpIp();
 	
 }
 
@@ -71,16 +71,10 @@ void Gps_Callback_Timer(u32 timerId, void* param){
         s32 ret;
 		ret = GetGPSLOC(loc);
 		if (ret == RIL_AT_SUCCESS ) {
-
-
+			flagGpsValido = 1;
 			Ql_strcpy(datosGps, loc + 12);
 			//Ql_Debug_Trace("Datos del GPS: %s\r\n", datosGps);
-
-
-			Ql_Debug_Trace("\r\n<-- flagConectado ...%d\r\n <-- flagGpsValido ...-->%d\r\n", flagConectado, flagGpsValido);
-
-			flagGpsValido = 1;
-			
+			//Ql_Debug_Trace("\r\n<-- flagConectado ...%d\r\n <-- flagGpsValido ...-->%d\r\n", flagConectado, flagGpsValido);
 			SeparaTramaGps();
 			
 		}else{
@@ -136,38 +130,38 @@ void SeparaTramaGps(void){
 	v = 0;
 	while (pch != NULL) {
 		switch (v) {
+				case 0:
+					Ql_sprintf(horaGreenwich, pch);
+					break;
 				case 1:
-					strcpy(horaGreenwich, pch);
+					Ql_sprintf(latitudgps, pch);
 					break;
 				case 2:
-					strcpy(latitud, pch);
+					Ql_sprintf(longitudgps, pch);
 					break;
 				case 3:
-					strcpy(longitud, pch);
+					//Ql_sprintf(longitud, pch);
 					break;
 				case 4:
-					//strcpy(longitud, pch);
+					Ql_sprintf(altura, pch);
 					break;
 				case 5:
-					strcpy(altura, pch);
+					//Ql_sprintf(indaltura, pch);
 					break;
 				case 6:
-					//strcpy(indaltura, pch);
+					Ql_sprintf(curso, pch);
 					break;
 				case 7:
-					strcpy(curso, pch);
+					Ql_sprintf(velocidad, pch);
 					break;
 				case 8:
-					strcpy(velocidad, pch);
-					break;
-				case 9:
 					//strcpy(indaltura, pch);
 					break;
-				case 10:
-					strcpy(fecha, pch);
+				case 9:
+					Ql_sprintf(fecha, pch);
 					break;
-				case 11:
-					strcpy(numeroSatelites, pch);
+				case 10:
+					Ql_sprintf(numeroSatelites, pch);
 					break;	
 				}
 		
@@ -178,133 +172,90 @@ void SeparaTramaGps(void){
 	for (int r = 0; r < 150; r++) {
 		datosGps[r] = 0x00;
 	}
-	changueSpeedKm();
-
 }
 
+void SeparaTramaGps2(void){
+	
+	for (int r = 0; r < 10; r++) {
+		
+		 curso[r] = 0x00;
+		 latitudgps[r] = 0x00;
+		 longitudgps[r] = 0x00;
+		 altura[r] = 0x00;
+		 velocidad[r] = 0x00;
+		 fecha[r] = 0x00;
+		 numeroSatelites[r] = 0x00;
+		
+	}
 
 
-void changueSpeedKm (void){
-	  unsigned char j;
-	  int copyVel;
-	  velocidadkm[0]=0x30;    //Inicializa Velocidad en 000.00
-	  velocidadkm[1]=0x30;
-	  velocidadkm[2]=0x30;
-	  velocidadkm[3]='.';
-	  velocidadkm[4]=0x30;
-	  velocidadkm[5]=0x30;
-	  velocidadkm[6]=0x00;
+	unsigned int v;
+	char * pch;
+	// printf ("Splitting string \"%s\" into tokens:\n",str);
+	//SendStringConfig((unsigned char*) "Esta es la Trama RMC:\n", &deviceDatac);
+	//SendStringConfig((unsigned char*) RMC, &deviceDatac);
+	pch = strtok(datosGpsActual, ",");   // Aqui deja solo la coma
+	v = 0;
+	while (pch != NULL) {
+		switch (v) {
+				case 0:
+					//strcpy(horaGreenwich, pch);
+					Ql_sprintf(horaGreenwich,pch);
+					break;
+				case 1:
+					//strcpy(latitud, pch);
+					Ql_sprintf(latitudgps,pch);
+					break;
+				case 2:
+					//strcpy(longitud, pch);
+					Ql_sprintf(longitudgps,pch);
+					break;
+				case 3:
+					//strcpy(longitud, pch);
+					break;
+				case 4:
+					//strcpy(altura, pch);
+					Ql_sprintf(altura,pch);
+					break;
+				case 5:
+					//strcpy(indaltura, pch);
+					break;
+				case 6:
+					//strcpy(curso, pch);
+					Ql_sprintf(curso,pch);
+					break;
+				case 7:
+					Ql_sprintf(velocidad, pch);
+					break;
+				case 8:
+					//strcpy(indaltura, pch);
+					break;
+				case 9:
+					Ql_sprintf(fecha, pch);
+					break;
+				case 10:
+					Ql_sprintf(numeroSatelites, pch);
+					break;	
+				}
+		
+		//Ql_Debug_Trace("%s\n",pch);// Aqui deberias guardar tu dato en el array!
+		pch = strtok(NULL, ",");  // Aca tambien iria solo la coma.!!
+		v++;
+	}
+	for (int r = 0; r < 150; r++) {
+		datosGpsActual[r] = 0x00;
+	}
+	
+	/*
+	Ql_Debug_Trace("============================================%s\n",latitudgps);
+	Ql_Debug_Trace("============================================%s\n",longitudgps);
+	Ql_Debug_Trace("============================================%s\n",velocidad);
+	Ql_Debug_Trace("============================================%s\n",altura);
+	Ql_Debug_Trace("============================================%s\n",curso);
+	Ql_Debug_Trace("============================================%s\n",fecha);
+	Ql_Debug_Trace("============================================%s\n",numeroSatelites);
+	*/
 
-	  veloKmh=0;          //Velocidad en Km/h
-
-	  j=0;
-	  while((j<6)&&(velocidad[j]!='.')){  //Contar bytes antes del (.)
-	    j++;
-	  }
-
-	  velocidad[0]-=0x30; //Pasar de ASCII a decimal
-	  velocidad[1]-=0x30;
-	  velocidad[2]-=0x30;
-	  velocidad[3]-=0x30;
-	  velocidad[4]-=0x30;
-	  velocidad[5]-=0x30;
-	  switch(j){   //Ver cuantas cifras tiene la velocidad....
-	    case(1):  //La velocidad esta entre 0.00 y 9.99 Knots -> VelMax:1850*9.99 = 18481 -> 18.48 Km/h
-	        if(velocidad[0]>0){ //La velocidad es Mayor de cero
-	          veloKmh+=(1852*velocidad[0]);     //1ra Cifra antes de la coma
-	          veloKmh+=(185*velocidad[2]);      //1ra Cifra despues de la coma(se deberia * por 185.2)
-	          veloKmh+=(18*velocidad[3]);       //2da Cifra despues de la coma(se deberia * por 18.52)
-	          copyVel=veloKmh/1000;             //Valor de Velocidad
-
-	          if(veloKmh > 9999){          //Velocidad Mayor a 10Km/h
-	        	  velocidadkm[1]=0x31;
-	            veloKmh-=10000;
-	            while(veloKmh > 999){
-	              veloKmh-=1000;
-	              velocidadkm[2]+=1;
-	            }
-	            while(veloKmh > 99){
-	              veloKmh-=100;
-	              velocidadkm[4]+=1;
-	            }
-	            while(veloKmh > 9){
-	              veloKmh-=10;
-	              velocidadkm[5]+=1;
-	            }
-	          }
-
-	          else{                         //Velocidad Menor a 10Km/h
-	            while(veloKmh > 999){
-	              veloKmh-=1000;
-	              velocidadkm[2]+=1;
-	            }
-	            while(veloKmh > 99){
-	              veloKmh-=100;
-	              velocidadkm[4]+=1;
-	            }
-	            while(veloKmh > 9){
-	              veloKmh-=10;
-	              velocidadkm[5]+=1;
-	            }
-	          }
-
-	          veloKmh= copyVel;   //Recuperar Valor de la Velocidad...
-	        }
-	    break;
-
-	    case(2):  //La velocidad esta entre 10.00 y 99.99 Knots
-	      veloKmh+=(1852*velocidad[0]);     //1ra Cifra antes de la coma
-	      veloKmh+=(185*velocidad[1]);      //2da Cifra antes de la coma(se deberia * por 185.2)
-	      veloKmh+=(18*velocidad[3]);       //1ra Cifra despues de la coma(se deberia * por 18.52)
-	      veloKmh+=(2*velocidad[4]);        //2da Cifra despues de la coma(se deberia * por 1.8 se aproxima a 2)
-	      copyVel=veloKmh/100;              //Valor de Velocidad
-	          if(veloKmh > 10000){          //Velocidad Mayor a 100Km/h
-	        	  velocidadkm[0]=0x31;
-	            veloKmh-=10000;
-	            while(veloKmh > 999){
-	              veloKmh-=1000;
-	              velocidadkm[1]+=1;
-	            }
-	            while(veloKmh > 99){
-	              veloKmh-=100;
-	              velocidadkm[2]+=1;
-	            }
-	            while(veloKmh > 9){
-	              veloKmh-=10;
-	              velocidadkm[4]+=1;
-	            }
-	            while(veloKmh > 0){
-	              veloKmh-=1;
-	              velocidadkm[5]+=1;
-	            }
-	          }
-
-	          else{                         //Velocidad Menor a 100Km/h
-	            while(veloKmh > 999){
-	              veloKmh-=1000;
-	              velocidadkm[1]+=1;
-	            }
-	            while(veloKmh > 99){
-	              veloKmh-=100;
-	              velocidadkm[2]+=1;
-	            }
-	            while(veloKmh > 9){
-	              veloKmh-=10;
-	              velocidadkm[4]+=1;
-	            }
-	            while(veloKmh > 0){
-	              veloKmh-=1;
-	              velocidadkm[5]+=1;
-	            }
-	          }
-	          veloKmh= copyVel;   //Recuperar Valor de la Velocidad...
-	    break;
-	    default:  //La velocidad es muy alta es mayor a 180 Km/h
-	    break;
-	  }
-
-	  //Ql_Debug_Trace("La velocidad es: %s\n",velocidadkm);
-	 
 }
 
 
@@ -337,12 +288,14 @@ static s32 DtsActuales_Handler(char* line, u32 len, void* userData)
 
 	size_t Size = strlen(line);
     if(Size > 20){
-    	Ql_Debug_Trace("Lo que responde %s\r\n", line);
+    	//Ql_Debug_Trace("Lo que responde %s\r\n", line);
+    	Ql_strcpy(datosGpsActual, line + 12);
+		SeparaTramaGps2();
 	}
 
     if (Ql_RIL_FindLine(line, len, "OK"))
     {  
-        Ql_Debug_Trace("todo ok \r\n");
+        //Ql_Debug_Trace("todo ok \r\n");
         return  RIL_ATRSP_SUCCESS;
     }
     else if (Ql_RIL_FindLine(line, len, "ERROR"))

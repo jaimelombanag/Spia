@@ -99,31 +99,30 @@ void proc_main_task(s32 taskId)
     Ql_Timer_Register(LedCmdtimerId, StateLedCmd_Callback_Timer, NULL);                     //Timer para el estado del LED
     
     
-
-    //Delay Necesario Para la conexion del Modulo
-    Ql_Sleep(3000);
     /*========   Inicializadores ==*/
-    //init_Gps();
-    //init_TcpIp();
+    init_Gps();
+    init_TcpIp();
     /*========   Inicializadores de Timers ==*/
     Ql_Timer_Start(LedCmdtimerId, 100, TRUE);                                                //Timer para el estado del LED
 
-
-
+    //Delay Necesario Para la conexion del Modulo
+     Ql_Sleep(10000);
 
 
 
     while(TRUE){
         Ql_OS_GetMessage(&msg);
+
         switch(msg.message)
         {
         case MSG_ID_RIL_READY:
             Ql_Debug_Trace("<-- Inicio programa Spia GPS... -->\r\n");
             Ql_RIL_Initialize();
-            ProcessEstadoLed();
         default:
             break;
-        }   
+        }  
+         ProcessEstadoLed();
+         SendAtCmd2(); 
     }
 
 
@@ -131,6 +130,7 @@ void proc_main_task(s32 taskId)
    
 }
 
+  
 
 /******************************************************************************************************************/
 
