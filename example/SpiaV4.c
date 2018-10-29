@@ -58,9 +58,10 @@
 #include "ril_telephony.h"
 #include "ql_fs.h"
 
-#include "TcpIp.h"
+//#include "TcpIp.h"
 #include "DatosGps.h"
 #include "SpiaV4.h"
+#include "TcpIpOpen.h"
 
 #include <string.h>
 #include "ql_type.h"
@@ -94,19 +95,22 @@ void proc_main_task(s32 taskId)
     Ql_Debug_Trace("Hora Programa: %s\r\n\r\n",__TIME__);
     // Initialize the GPIO pin (output high level, pull up)
     iRet = Ql_GPIO_Init(SLEEP, PINDIRECTION_OUT, lvl, PINPULLSEL_PULLDOWN);
-    Ql_Debug_Trace("<-- Initialize GPIO pin (%d): output, level=%d, pull up, iRet=%d -->\r\n", SLEEP, lvl, iRet);
+    //Ql_Debug_Trace("<-- Initialize GPIO pin (%d): output, level=%d, pull up, iRet=%d -->\r\n", SLEEP, lvl, iRet);
 
     Ql_Timer_Register(LedCmdtimerId, StateLedCmd_Callback_Timer, NULL);                     //Timer para el estado del LED
     
     
     /*========   Inicializadores ==*/
     init_Gps();
-    init_TcpIp();
+    //init_TcpIp();
+    
     /*========   Inicializadores de Timers ==*/
     Ql_Timer_Start(LedCmdtimerId, 100, TRUE);                                                //Timer para el estado del LED
 
     //Delay Necesario Para la conexion del Modulo
      Ql_Sleep(10000);
+     init_TcpIpOpenCPU();
+
 
 
 
@@ -122,16 +126,24 @@ void proc_main_task(s32 taskId)
             break;
         }  
          ProcessEstadoLed();
-         SendAtCmd2(); 
+         //SendAtCmd2(); 
     }
-
-
-
    
 }
 
+
+
+
+/******************************************************************************************************************/
+/******************************************************************************************************************/
+/******************************************************************************************************************/
+
+
+
   
 
+/******************************************************************************************************************/
+/******************************************************************************************************************/
 /******************************************************************************************************************/
 
 

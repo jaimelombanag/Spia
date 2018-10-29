@@ -26,7 +26,24 @@
 #ifndef __TCPIP_H__
 #define __TCPIP_H__
 
+
+
 //Declara callback , funciones que seran invocadas
+void CallBack_GPRS_Deactived(u8 contextId, s32 errCode, void* customParam);
+void Callback_GPRS_Actived(u8 contexId, s32 errCode, void* customParam);
+void callback_socket_close(s32 socketId, s32 errCode, void* customParam );
+void callback_socket_read(s32 socketId, s32 errCode, void* customParam );
+void callback_socket_write(s32 socketId, s32 errCode, void* customParam );
+void callback_socket_connect(s32 socketId, s32 errCode, void* customParam );
+void callback_socket_accept(s32 listenSocketId, s32 errCode, void* customParam );
+
+
+
+
+#define PDP_CONTEXT_ID 1
+#define SEND_BUFFER_LEN     10*1024
+#define RECV_BUFFER_LEN     2048
+
 
 static void CallBack_UART_Hdlr(Enum_SerialPort port, Enum_UARTEventType msg, bool level, void* customizedPara);
 static s32 ATSend_Handler(char* line, u32 len, void* userData);
@@ -48,6 +65,13 @@ unsigned int flagConectado;
 unsigned int flagwismo;
 u16  g_cmd_idx;
 unsigned int poliConexion;
+u8 ip_addr[5];
+static u64 m_nSentLen  = 0;      // Bytes of number sent data through current socket    
+static u8 m_recv_buf[RECV_BUFFER_LEN];
+static s32 m_socketid= -1;  // Store Socket Id that returned by Ql_SOC_Create()
+static char *m_pCurrentPos = NULL; 
+static s32 m_remain_len = 0;     // record the remaining number of bytes in send buffer.
+
 
 
 //static char sg_aDbgBuf[DBG_BUF_MAX_LEN];  //buffer comandos AT
