@@ -32,6 +32,7 @@ void SeparaTramaGps(void);
 void TomaDatosActuales(void);
 static s32 DtsActuales_Handler(char* line, u32 len, void* userData);
 
+
 //Definicion de varibles
 
 static char sendbuffergps[100];
@@ -41,15 +42,15 @@ char loc[256];
 char datosGps[150];
 char datosGpsActual[150];
 
-char horaGreenwich[];
-char latitudgps[10];
+char horaGreenwich[7];
+char latitudgps[8];
 char longitudgps[10];
-char altura[10];
+char altura[7];
 char indaltura[];
-char curso[];
-char velocidad[10];
-char fecha[10];
-char numeroSatelites[5];
+char curso[6];
+char velocidad[6];
+char fecha[7];
+char numeroSatelites[3];
 char fixQuality[];
 unsigned int  veloKmh;
 unsigned int flagGpsValido;

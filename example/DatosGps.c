@@ -117,9 +117,18 @@ static s32 ATResponse_GPS_Handler(char* line, u32 len, void* param) {
 
 
 void SeparaTramaGps(void){
-	//SendStringConfigurador((unsigned char*) "GGA: \r\n",&deviceDatac);
-	//SendStringConfigurador((unsigned char*) TramaSaveGGA,&deviceDatac);
-	//SendStringConfigurador((unsigned char*) "\r\n",&deviceDatac);
+	
+	for (int r = 0; r < 10; r++) {
+		
+		 curso[r] = 0x00;
+		 latitudgps[r] = 0x00;
+		 longitudgps[r] = 0x00;
+		 altura[r] = 0x00;
+		 velocidad[r] = 0x00;
+		 fecha[r] = 0x00;
+		 horaGreenwich[r] = 0x00;
+	}
+	Ql_memset(numeroSatelites,0,sizeof(numeroSatelites));//limpia buff
 
 	unsigned int v;
 	char * pch;
@@ -172,6 +181,10 @@ void SeparaTramaGps(void){
 	for (int r = 0; r < 150; r++) {
 		datosGps[r] = 0x00;
 	}
+
+
+	LimpiaCaracteres();
+
 }
 
 void SeparaTramaGps2(void){
@@ -184,9 +197,9 @@ void SeparaTramaGps2(void){
 		 altura[r] = 0x00;
 		 velocidad[r] = 0x00;
 		 fecha[r] = 0x00;
-		 numeroSatelites[r] = 0x00;
-		
+		 horaGreenwich[r] = 0x00;
 	}
+	Ql_memset(numeroSatelites,0,sizeof(numeroSatelites));//limpia buff
 
 
 	unsigned int v;
@@ -246,6 +259,10 @@ void SeparaTramaGps2(void){
 		datosGpsActual[r] = 0x00;
 	}
 	
+	LimpiaCaracteres();
+
+
+
 	/*
 	Ql_Debug_Trace("============================================%s\n",latitudgps);
 	Ql_Debug_Trace("============================================%s\n",longitudgps);
@@ -255,6 +272,37 @@ void SeparaTramaGps2(void){
 	Ql_Debug_Trace("============================================%s\n",fecha);
 	Ql_Debug_Trace("============================================%s\n",numeroSatelites);
 	*/
+
+}
+
+
+
+void LimpiaCaracteres(void){
+
+	for(int i = 0; i < sizeof(horaGreenwich) - 1; i++){
+		horaGreenwich[i] = horaGreenwich[i];
+    }
+    horaGreenwich[6] = 0x00;
+
+    for(int i = 0; i < sizeof(latitudgps) - 1; i++){
+		latitudgps[i] = latitudgps[i];
+    }
+    latitudgps[7] = 0x00;
+
+    for(int i = 0; i < sizeof(longitudgps) - 1; i++){
+		longitudgps[i] = longitudgps[i];
+    }
+    longitudgps[9] = 0x00;
+
+    for(int i = 0; i < sizeof(altura) - 1; i++){
+		altura[i] = altura[i];
+    }
+    altura[6] = 0x00;
+
+    for(int i = 0; i < sizeof(fecha) - 1; i++){
+		fecha[i] = fecha[i];
+    }
+    fecha[6] = 0x00;
 
 }
 

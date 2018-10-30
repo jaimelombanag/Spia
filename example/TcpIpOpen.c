@@ -44,6 +44,77 @@ ST_SOC_Callback      callback_soc_func=
 /******************************************************************************************************************/
 /******************************************************************************************************************/
 /******************************************************************************************************************/
+s32 ImeiEquipo(){
+	s32 ret; 
+	Ql_memset(sendbuffergps, 0, sizeof(sendbuffergps));
+    Ql_sprintf((char *)sendbuffergps, "AT+CGSN");  
+	ret = Ql_RIL_SendATCmd(sendbuffergps,Ql_strlen(sendbuffergps),Imei_Handler,NULL,0);
+    Ql_Debug_Trace("<-- Send AT:%s, ret = %d -->\r\n",sendbuffergps, ret);
+    if(ret < 0)
+    {
+        Ql_Debug_Trace("\r\n<-- No hay respuesta del IMEI -->\r\n");
+    }else {
+		//Ql_Debug_Trace("IMEI ok\r\n");
+	}
+
+    return ret;
+
+}
+/*******************************************************************************************************************/
+static s32 Imei_Handler(char* line, u32 len, void* userData)
+{
+
+	if (strstr(line, "\r\n") != NULL){
+		if (strstr(line, "\r\nOK") == NULL){
+			
+			//char ImeiInit = zStrrep(line, '\r\n', '');
+			
+			Ql_sprintf(Imei, line);
+			//strtok(Imei, "\r\n");
+			
+
+
+			
+		    char vocal_sin[]="\x00",vocal_con[]="\r\n";
+		    int i,j;
+		    for (i=0;Imei[i]!='\0';i++)
+		        for (j=0;j<5;j++){
+		            if (vocal_con[j]==Imei[i])
+		                Imei[i]=vocal_sin[j];
+		        }
+		   
+
+
+
+
+			//Imei = zStrrep(Imei, '\r\n', '\0');
+			Ql_Debug_Trace("\r\n<-- IMEI DEL EQUIPO:  -%s-->\r\n", Imei);
+		}
+		
+	}
+    Ql_UART_Write(UART_PORT1, (u8*)line, len);
+ 
+    if (Ql_RIL_FindLine(line, len, "OK")){  
+       return  RIL_ATRSP_SUCCESS;        
+    }
+    else if (Ql_RIL_FindLine(line, len, "ERROR")){  
+        return  RIL_ATRSP_FAILED;
+    }
+    else if (Ql_RIL_FindString(line, len, "+CME ERROR"))
+    {
+        return  RIL_ATRSP_FAILED;
+    }
+    else if (Ql_RIL_FindString(line, len, "+CMS ERROR:"))
+    {
+        return  RIL_ATRSP_FAILED;
+    }
+
+    return RIL_ATRSP_CONTINUE; //continue wait
+}
+
+/******************************************************************************************************************/
+/******************************************************************************************************************/
+/******************************************************************************************************************/
 void init_TcpIpOpenCPU(void){
 
 
@@ -92,39 +163,50 @@ void SendFrame(void){
 
 char * LlenaBuffer (){
 
-    int i = 0;
-    while (i < 800) {
-        m_send_buf[i] = 0x00; /*Se inicializa el Vector bufferTx1 como cadena vacía*/
-        i++;
-    }
-    
+    Ql_memset(m_send_buf, " \x00", sizeof(m_send_buf));//limpia buff
 
     if(flagGpsValido = 1){
+    		char satelites[3];
+    		for(int i = 0; i < sizeof(numeroSatelites) - 1; i++){
+				satelites[i] = numeroSatelites[i];
+    		}
+    		satelites[3] = 0x00;
+    		//zStrrep(horaGreenwich, '.' , '')
+            Ql_sprintf(datosNmea,"\'latitud\':\'%s\',\'longitud\':\'%s\',\'velocidad\':\'%s\',"
+                    "\'altitud\':\'%s\',\'curso\':\'%s\',\'fecha\':\'%s%s\',\'satelites\':\'%s\'}", latitudgps, longitudgps, velocidad, altura, curso,fecha, horaGreenwich, satelites);
 
-            Ql_sprintf(nmea,"\'latitud\':\'%s\',\'longitud\':\'%s\',\'velocidad\':\'%s\',"
-                    "\'altitud\':\'%s\',\'curso\':\'%s\',\'fecha\':\'%s\',\'satelites\':\'%s\'", latitudgps, longitudgps, velocidad, altura, curso,fecha,numeroSatelites);
-
+             
     }else{
-            Ql_sprintf(nmea,"\'latitud\':\'0\',\'longitud\':\'0\',\'velocidad\':\'00\',"
-                    "\'altitud\':\'0\',\'curso\':\'0\',\'fecha\':\'0\',\'satelites\':\'00\'");
+            Ql_sprintf(datosNmea,"\'latitud\':\'0\',\'longitud\':\'0\',\'velocidad\':\'00\',"
+                    "\'altitud\':\'0\',\'curso\':\'0\',\'fecha\':\'0\',\'satelites\':\'00\'}");
 
     }
 
+    //Ql_Debug_Trace("<-- DATOS DEL GPS: %s -->\r\n", datosNmea);
+    
+	Ql_sprintf(m_send_buf,"{\'idMovil\':\'%s\',\'transaccion\':\'%s\',\'dirIpCliente\':\'%d.%d.%d.%d\',\'movImei\':\'%s\',\'version\':\'%s\',"
+                "\'tipoCoordenada\':\'1\',\'kilometros\':\'%s\','origenSolicitud':'1',%s\r\n","555555","00",ip_addr[0],ip_addr[2],ip_addr[3],ip_addr[4],"123456789012345","V4-char","20", datosNmea);
 
-
-	Ql_sprintf(m_send_buf," {\'idMovil\':\'%s\',\'transaccion\':\'%s\',\'dirIpCliente\':\'%d.%d.%d.%d\',\'movImei\':\'%s\',\'version\':\'%s\',"
-                "\'tipoCoordenada\':\'1\',\'kilometros\':\'%s\','origenSolicitud':'1', %s}\r\n","555555","02",10,10,10,10,"32132132132131","V4-char","20", nmea);
-
-
-      // Convertir cada char a minúscula
-    // usando tolower
-    //for (int indice = 0; bufferTxModulo[indice] != '\0'; ++indice){
-    //    bufferTxModulo[indice] = tolower(bufferTxModulo[indice]);
-    //}
-   
 
     return m_send_buf;
 }
+
+
+//********PARA REMPLZAR CARACTERTES**********************************//
+char *zStrrep(char *str, char x, char y){
+    char *tmp=str;
+    while(*tmp)
+        if(*tmp == x)
+            *tmp++ = y; /* assign first, then incement */
+        else
+            *tmp++;
+
+    *tmp='\0';
+    return str;
+}
+//******************************************************************//
+
+
 /******************************************************************************************************************/
 /******************************************************************************************************************/
 /******************************************************************************************************************/
@@ -351,6 +433,7 @@ static void Callback_Timer(u32 timerId, void* param)
                 if (GPRS_PDP_SUCCESS == ret)
                 {
                     Ql_Debug_Trace("<--configure GPRS param successfully.-->\r\n");
+                    ImeiEquipo();
                 }else
                 {
                     Ql_Debug_Trace("<--configure GPRS param failure,ret=%d.-->\r\n",ret);
@@ -406,8 +489,26 @@ static void Callback_Timer(u32 timerId, void* param)
 
                     m_tcp_state = STATE_GPRS_DEACTIVATE;
                 }
+
                 break;
             }
+
+
+            case STATE_GPRS_GET_LOCALIP:
+			{
+				Ql_memset(ip_addr, 0, 5);
+				ret = Ql_GPRS_GetLocalIPAddress(PDP_CONTEXT_ID, (u32 *)ip_addr);
+				if (ret == GPRS_PDP_SUCCESS)
+				{
+					Ql_Debug_Trace("La Ip de la Sim es --> %d.%d.%d.%d <--\r\n\r\n",ip_addr[0],ip_addr[1],ip_addr[2],ip_addr[3]);
+					m_tcp_state = STATE_SOC_SEND;
+				}else
+				{
+					Ql_Debug_Trace("<--Get Local Ip failure,ret=%d.\r\n",ret);
+				}
+				break;
+			}
+
             case STATE_SOC_SEND:
             {
                // if (!Ql_strlen(m_send_buf))//no data need to send
@@ -427,14 +528,37 @@ static void Callback_Timer(u32 timerId, void* param)
 
         	   LlenaBuffer(); 
 
-               m_remain_len = sizeof(m_send_buf);
-               m_pCurrentPos = m_send_buf;
+               //m_remain_len = sizeof();
+               //m_pCurrentPos = m_send_buf;
                
                 m_tcp_state = STATE_SOC_SENDING;
+
+
+
+               //unsigned char jaime[] = {"{'idMovil':'555555','transaccion':'00','dirIpCliente':'10.192.134.101','movImei':'867060031692193','version':'V4,2.3','tipoCoordenada':'0','kilometros':'6305','origenSolicitud':'1','latitud':'0325.2702N','longitud':'07630.2628W','velocidad':'0.026','altitud':'970.9','curso':'273.55','fecha':'291018195843','satelites':'09'}\r\n"};
                 
-                do
-                {
-                    ret = Ql_SOC_Send(m_socketid, m_pCurrentPos, m_remain_len);
+
+
+
+
+
+				m_remain_len = Ql_strlen(m_send_buf);
+				m_tcp_state = STATE_SOC_SENDING;
+
+				do
+				{
+					ret = Ql_SOC_Send(m_socketid,m_send_buf,m_remain_len);
+
+
+
+
+               // do
+                //{
+                //    ret = Ql_SOC_Send(m_socketid, m_pCurrentPos, m_remain_len);
+
+
+
+
                     Ql_Debug_Trace("<--Send data,socketid=%d,number of bytes sent=%d-->\r\n",m_socketid,ret);
                     if(ret == m_remain_len)//send compelete
                     {
@@ -563,13 +687,13 @@ void callback_socket_connect(s32 socketId, s32 errCode, void* customParam )
 
         flagConectado = 1;
 
-        m_tcp_state = STATE_SOC_SEND;
+        m_tcp_state = STATE_GPRS_GET_LOCALIP;
     }else
     {
     	flagConectado = 0;
         Ql_Debug_Trace("<--Callback: socket connect failure,(socketId=%d),errCode=%d-->\r\n",socketId,errCode);
         Ql_SOC_Close(socketId);
-        m_tcp_state = STATE_SOC_CREATE;
+        m_tcp_state = STATE_SOC_CONNECT;
     }
 }
 
@@ -608,7 +732,7 @@ void callback_socket_read(s32 socketId, s32 errCode, void* customParam )
             Ql_Debug_Trace("<-- Receive data failure,ret=%d.-->\r\n",ret);
             Ql_Debug_Trace("<-- Close socket.-->\r\n");
             Ql_SOC_Close(socketId); //you can close this socket  
-            m_tcp_state = STATE_SOC_CREATE;
+            m_tcp_state = STATE_SOC_CONNECT;
             break;
         }
         else if(ret == -2)
@@ -690,3 +814,6 @@ void CallBack_GPRS_Deactived(u8 contextId, s32 errCode, void* customParam )
         Ql_Debug_Trace("<--CallBack: deactived GPRS failure,(contexid=%d,error_cause=%d)-->\r\n",contextId,errCode); 
     }
 }
+
+/******************************************************************************************************************/
+/******************************************************************************************************************/

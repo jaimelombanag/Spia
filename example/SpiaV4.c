@@ -100,16 +100,14 @@ void proc_main_task(s32 taskId)
     Ql_Timer_Register(LedCmdtimerId, StateLedCmd_Callback_Timer, NULL);                     //Timer para el estado del LED
     
     
+    /*========   Inicializadores de Timers ==*/
+    Ql_Timer_Start(LedCmdtimerId, 100, TRUE);                                                //Timer para el estado del LED
+    //Delay Necesario Para la conexion del Modulo
+    Ql_Sleep(7000);
     /*========   Inicializadores ==*/
     init_Gps();
     //init_TcpIp();
-    
-    /*========   Inicializadores de Timers ==*/
-    Ql_Timer_Start(LedCmdtimerId, 100, TRUE);                                                //Timer para el estado del LED
-
-    //Delay Necesario Para la conexion del Modulo
-     Ql_Sleep(10000);
-     init_TcpIpOpenCPU();
+    init_TcpIpOpenCPU();
 
 
 

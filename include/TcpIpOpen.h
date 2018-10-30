@@ -40,8 +40,8 @@ static u8 m_passwd[10] = "";
 * Configure TCP/UDP Server (ip, port)
 ******************************************************************/
 static u8  m_SrvADDR[100] = "200.91.204.38";
-#define  TCP_PORT           (11260)
-#define  UDP_PORT           (11260)
+#define  TCP_PORT           (11250)
+#define  UDP_PORT           (11250)
 #define  SOCKET_TYPE        (SOC_TYPE_TCP)  // SOC_TYPE_TCP or SOC_TYPE_UDP
 
 
@@ -91,8 +91,9 @@ static s32 TcpTimerId=0x107;
 static s32 TcpTmr_status = FALSE;
 static s32 timeout_90S_monitor = FALSE;
 
-#define SEND_BUFFER_LEN     10*1024
+#define SEND_BUFFER_LEN     1000
 #define RECV_BUFFER_LEN     2048
+#define DATOS_BUFFER_GPS    2048
 
 #if (SOCKET_TYPE==SOC_TYPE_TCP)
 static u32 m_SrvPort = TCP_PORT;
@@ -100,13 +101,14 @@ static u32 m_SrvPort = TCP_PORT;
 static u32 m_SrvPort = UDP_PORT;
 #endif
 
-unsigned char nmea[310];
 
 
-
+static u8 Imei[20];
+static u8 ip_addr[5];
 static u8 m_ipaddress[5];  //only save the number of server ip, remove the comma
 static u8 m_send_buf[SEND_BUFFER_LEN];
 static u8 m_recv_buf[RECV_BUFFER_LEN];
+static u8 datosNmea[DATOS_BUFFER_GPS];
 static u64 m_nSentLen  = 0;      // Bytes of number sent data through current socket    
 static s32 m_socketid = -1; 
 static s32 m_remain_len = 0;     // record the remaining number of bytes in send buffer.
@@ -143,8 +145,10 @@ void TimerTcp_Callback_Timer(u32 timerId, void* param);
 extern s32 Analyse_Command(u8* src_str,s32 symbol_num,u8 symbol, u8* dest_buf);
 static s32 ReadSerialPort(Enum_SerialPort port, /*[out]*/u8* pBuffer, /*[in]*/u32 bufLen);
 static void proc_handle(char *pData,s32 len);
+static s32 Imei_Handler(char* line, u32 len, void* userData);
 void init_TcpIpOpenCPU(void);
 void SendFrame(void);
+char *zStrrep(char *str, char x, char y);
 
 static s32 ret;
 
